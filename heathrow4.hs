@@ -3,11 +3,16 @@ import System.Environment (getArgs)
 
 main = do
   args <- getArgs
-  let (ProgArgs outputFormatter parallelNames) = progArgs args
+  let pArgs = progArgs args
   line <- getLine
   let blocks = readBlocks line
   let path = shortestPath blocks
-  putStrLn $ outputFormatter parallelNames path
+  putStrLn $ outputResult pArgs path
+
+
+outputResult :: Either String (ProgArgs Integer) -> Path Integer -> String
+outputResult (Right (ProgArgs outputFormatter parallelNames)) p = outputFormatter parallelNames p
+outputResult (Left message) _ = message
 
 
 type ParallelNames = Parallel -> String
@@ -21,15 +26,16 @@ data ProgArgs a = ProgArgs {
 defaultProgArgs = ProgArgs instructPath cardinalNames
 
 
-progArgs :: [String] -> ProgArgs Integer
+progArgs :: [String] -> Either String (ProgArgs Integer)
 progArgs l = progArgs' defaultProgArgs l
 
-progArgs' pa [] = pa
+progArgs' :: ProgArgs Integer -> [String] -> Either String (ProgArgs Integer)
+progArgs' pa [] = Right pa
 progArgs' (ProgArgs _ n) ("-i":as) = progArgs' (ProgArgs instructPath n) as
 progArgs' (ProgArgs _ n) ("-r":as) = progArgs' (ProgArgs showRoads n) as
 progArgs' (ProgArgs f _) ("-c":as) = progArgs' (ProgArgs f cardinalNames) as
 progArgs' (ProgArgs f _) ("-l":as) = progArgs' (ProgArgs f letterNames) as
-progArgs' _ (a:_) = error $ "Invalid argument " ++ a
+progArgs' _ (a:_) = Left $ "Invalid argument " ++ a
 
 
 instructPath :: (Show a, Eq a, Num a) => ParallelNames -> Path a -> String
