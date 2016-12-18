@@ -21,7 +21,6 @@ data Road a = Road {
   roadLength   :: a
 } deriving Show
 
-
 data Block a = Block {
   northRoad :: Road a,
   southRoad :: Road a,
@@ -31,10 +30,12 @@ data Block a = Block {
 block :: a -> a -> a -> Block a
 block a1 a2 a3 = Block (Road North a1) (Road South a2) (Road Cross a3)
 
-
 blocks :: [a] -> [Block a]
 blocks (a1:a2:a3:as) = (block a1 a2 a3):(blocks as)
 blocks _ = []
+
+readBlocks :: String -> [Block Integer]
+readBlocks = blocks . (map read) . words
 
 
 type Path a = ([Road a], a)
@@ -76,6 +77,3 @@ shortestPathBy p (b:bs) = minPath byStraight byCrossed
 
 shortestPath :: (Ord a, Num a) => [Block a] -> Path a
 shortestPath bs = minPath (shortestPathBy North bs) (shortestPathBy South bs)
-
-readBlocks :: String -> [Block Integer]
-readBlocks = blocks . (map read) . words

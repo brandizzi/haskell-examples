@@ -3,18 +3,15 @@ import System.Environment (getArgs)
 import Heathrow
 
 main = do
-  args <- getArgs
-  let pArgs = progArgs args
+  pArgs <- progArgs
   line <- getLine
   let blocks = readBlocks line
   let path = shortestPath blocks
   putStrLn $ outputResult pArgs path
 
 
-outputResult :: Either String (ProgArgs Integer) -> Path Integer -> String
-outputResult (Right (ProgArgs outputFormatter parallelNames)) p = outputFormatter parallelNames p
-outputResult (Left message) _ = message
-
+outputResult :: ProgArgs Integer -> Path Integer -> String
+outputResult (ProgArgs outputFormatter parallelNames) p = outputFormatter parallelNames p
 
 type ParallelNames = Parallel -> String
 type OutputFormatter a = ParallelNames -> Path a -> String
@@ -27,16 +24,18 @@ data ProgArgs a = ProgArgs {
 defaultProgArgs = ProgArgs instructPath cardinalNames
 
 
-progArgs :: [String] -> Either String (ProgArgs Integer)
-progArgs l = progArgs' defaultProgArgs l
+progArgs :: IO (ProgArgs Integer)
+progArgs = do
+  args <- getArgs
+  return $ progArgs' defaultProgArgs args
 
-progArgs' :: ProgArgs Integer -> [String] -> Either String (ProgArgs Integer)
-progArgs' pa [] = Right pa
+progArgs' :: ProgArgs Integer -> [String] -> ProgArgs Integer
+progArgs' pa [] = pa
 progArgs' (ProgArgs _ n) ("-i":as) = progArgs' (ProgArgs instructPath n) as
 progArgs' (ProgArgs _ n) ("-r":as) = progArgs' (ProgArgs showRoads n) as
 progArgs' (ProgArgs f _) ("-c":as) = progArgs' (ProgArgs f cardinalNames) as
 progArgs' (ProgArgs f _) ("-l":as) = progArgs' (ProgArgs f letterNames) as
-progArgs' _ (a:_) = Left $ "Invalid argument " ++ a
+progArgs' _ (a:_) = error $ "Invalid argument " ++ a
 
 
 instructPath :: (Show a, Eq a, Num a) => ParallelNames -> Path a -> String
@@ -55,8 +54,6 @@ instructRoad parallelName (Road p l) = unwords instructionList
 
 showRoads :: (Show a, Eq a, Num a) => ParallelNames -> Path a -> String
 showRoads parallelName = unwords . map parallelName . map parallel . fst
-
-
 
 cardinalNames :: Parallel -> String
 cardinalNames = show
