@@ -1,3 +1,5 @@
+import Data.List (intercalate)
+
 data Parallel = North | South | Cross deriving Show
 
 other :: Parallel -> Parallel
@@ -69,8 +71,21 @@ shortestPath bs = minPath (shortestPathBy North bs) (shortestPathBy South bs)
 readBlocks :: String -> [Block Integer]
 readBlocks = blocks . (map read) . words
 
+instructRoad :: (Show a, Eq a, Num a) => Road a -> String
+instructRoad (Road _ 0) = "You arrived."
+instructRoad (Road Cross l) = unwords instructionList
+  where
+    instructionList = ["Cross for", show l, "miles."]
+
+instructRoad (Road p l) = unwords instructionList
+  where
+    instructionList = ["Follow", show p , "for", show l, "miles."]
+
+instructPath :: (Show a, Eq a, Num a) => Path a -> String
+instructPath = intercalate "\n" . map instructRoad . fst
+
 main = do
   line <- getLine
   let blocks = readBlocks line
   let path = shortestPath blocks
-  putStrLn $ show path
+  putStrLn $ instructPath path
