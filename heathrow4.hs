@@ -1,4 +1,66 @@
 import Data.List (intercalate)
+import System.Environment (getArgs)
+
+main = do
+  args <- getArgs
+  let (ProgArgs outputFormatter parallelNames) = progArgs args
+  line <- getLine
+  let blocks = readBlocks line
+  let path = shortestPath blocks
+  putStrLn $ outputFormatter parallelNames path
+
+
+type ParallelNames = Parallel -> String
+type OutputFormatter a = ParallelNames -> Path a -> String
+
+data ProgArgs a = ProgArgs {
+  outputFormater  :: OutputFormatter a,
+  parallelNames :: ParallelNames
+}
+
+defaultProgArgs = ProgArgs instructPath cardinalNames
+
+
+progArgs :: [String] -> ProgArgs Integer
+progArgs l = progArgs' defaultProgArgs l
+
+progArgs' pa [] = pa
+progArgs' (ProgArgs _ n) ("-i":as) = progArgs' (ProgArgs instructPath n) as
+progArgs' (ProgArgs _ n) ("-r":as) = progArgs' (ProgArgs showRoads n) as
+progArgs' (ProgArgs f _) ("-c":as) = progArgs' (ProgArgs f cardinalNames) as
+progArgs' (ProgArgs f _) ("-l":as) = progArgs' (ProgArgs f letterNames) as
+progArgs' _ (a:_) = error $ "Invalid argument " ++ a
+
+
+instructPath :: (Show a, Eq a, Num a) => ParallelNames -> Path a -> String
+instructPath parallelName = intercalate "\n" . map (instructRoad parallelName) . fst
+
+instructRoad :: (Show a, Eq a, Num a) => ParallelNames -> Road a -> String
+instructRoad _ (Road _ 0) = "You arrived."
+instructRoad parallelName (Road Cross l) = unwords instructionList
+  where
+    instructionList = ["Cross for",  show l, "miles."]
+
+instructRoad parallelName (Road p l) = unwords instructionList
+  where
+    instructionList = ["Follow", parallelName p , "for", show l, "miles."]
+
+
+showRoads :: (Show a, Eq a, Num a) => ParallelNames -> Path a -> String
+showRoads parallelName = unwords . map parallelName . map parallel . fst
+
+
+
+cardinalNames :: Parallel -> String
+cardinalNames = show
+
+letterNames :: Parallel -> String
+letterNames North = "A"
+letterNames South = "B"
+letterNames Cross = "C"
+
+
+-- HERE COMES THE INTERESTING PART
 
 data Parallel = North | South | Cross deriving Show
 
@@ -70,22 +132,3 @@ shortestPath bs = minPath (shortestPathBy North bs) (shortestPathBy South bs)
 
 readBlocks :: String -> [Block Integer]
 readBlocks = blocks . (map read) . words
-
-instructRoad :: (Show a, Eq a, Num a) => Road a -> String
-instructRoad (Road _ 0) = "You arrived."
-instructRoad (Road Cross l) = unwords instructionList
-  where
-    instructionList = ["Cross for", show l, "miles."]
-
-instructRoad (Road p l) = unwords instructionList
-  where
-    instructionList = ["Follow", show p , "for", show l, "miles."]
-
-instructPath :: (Show a, Eq a, Num a) => Path a -> String
-instructPath = intercalate "\n" . map instructRoad . fst
-
-main = do
-  line <- getLine
-  let blocks = readBlocks line
-  let path = shortestPath blocks
-  putStrLn $ instructPath path
