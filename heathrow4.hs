@@ -1,14 +1,25 @@
+import Control.Monad (when)
 import Data.List (intercalate)
 import System.Environment (getArgs)
+import System.Exit (die)
 import Heathrow
 
 main = do
-  pArgs <- progArgs
+  mArgs <- progArgs <$> getArgs
+
+  when (not $ validArgs mArgs) $ do
+    let (Left message) = mArgs
+    die message
+
+  let (Right args) = mArgs
   line <- getLine
   let blocks = readBlocks line
   let path = shortestPath blocks
-  putStrLn $ outputResult pArgs path
+  putStrLn $ outputResult args path
 
+validArgs :: Either String (ProgArgs a) -> Bool
+validArgs (Right _) = True
+validArgs (Left _) = False
 
 outputResult :: ProgArgs Integer -> Path Integer -> String
 outputResult (ProgArgs outputFormatter parallelNames) p = outputFormatter parallelNames p
@@ -24,18 +35,16 @@ data ProgArgs a = ProgArgs {
 defaultProgArgs = ProgArgs instructPath cardinalNames
 
 
-progArgs :: IO (ProgArgs Integer)
-progArgs = do
-  args <- getArgs
-  return $ progArgs' defaultProgArgs args
+progArgs :: [String] -> Either String  (ProgArgs Integer)
+progArgs = progArgs' defaultProgArgs
 
-progArgs' :: ProgArgs Integer -> [String] -> ProgArgs Integer
-progArgs' pa [] = pa
+progArgs' :: ProgArgs Integer -> [String] -> Either String (ProgArgs Integer)
+progArgs' pa [] = Right pa
 progArgs' (ProgArgs _ n) ("-i":as) = progArgs' (ProgArgs instructPath n) as
 progArgs' (ProgArgs _ n) ("-r":as) = progArgs' (ProgArgs showRoads n) as
 progArgs' (ProgArgs f _) ("-c":as) = progArgs' (ProgArgs f cardinalNames) as
 progArgs' (ProgArgs f _) ("-l":as) = progArgs' (ProgArgs f letterNames) as
-progArgs' _ (a:_) = error $ "Invalid argument " ++ a
+progArgs' _ (a:_) = Left $ "Invalid argument " ++ a
 
 
 instructPath :: (Show a, Eq a, Num a) => ParallelNames -> Path a -> String
